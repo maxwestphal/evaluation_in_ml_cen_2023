@@ -47,3 +47,29 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+/.quarto/
+
+# Test folder
+test/
+
+# Dev folder
+dev/
+
+# renv folder
+renv/
+
+# data folder
+data/
+
+# figures folder
+figures/
+
+# quarto folders
+slides_files/
+slides_cache/
+_extensions
+docs
+
+
+

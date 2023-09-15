@@ -1,0 +1,1952 @@
+---
+title: "Model and Algorithm Evaluation in Supervised Machine Learning" 
+subtitle: "Short Course at CEN 2023 Conference"
+date: 2023-09-03
+author: "Max Westphal, Rieke Alpers"
+institute: Fraunhofer Institute for Digital Medicine MEVIS
+format: 
+  revealjs:
+    mermaid:
+      theme: forest
+      font-size: 18
+    chalkboard: true
+    self-contained: false
+    email-obfuscation: javascript
+    width: 1600
+    height: 900
+    smaller: false
+    scrollable: true
+    transition: fade
+    slide-number: c
+    show-slide-number: all
+    auto-stretch: true
+    theme: [default, custom.scss]
+    logo: figures/mevis.svg
+    code-block-bg: true
+    code-block-border-left: "#31BAE9"
+    footer: "Max Westphal & Rieke Alpers &nbsp; - &nbsp; Model and Algorithm Evaluation in Supervised Machine Learning &nbsp; - &nbsp; Short Course at CEN  2023 Conference &nbsp; - &nbsp; 2023-09-03 "
+    margin: 0.1
+filters: 
+  - search-replace
+search-replace:
+  ++int: "{{< fa solid play >}} \ " # introduction
+  ++cc: "{{< fa solid power-off >}} \ " # core concepts
+  ++pm: "{{< fa solid bullseye >}} \ " # performance metrics
+  ++ds: "{{< fa solid database >}} \ " # data splitting
+  ++sa: "{{< fa solid chart-column >}} \ " # statistical analysis
+  ++pa: "{{< fa solid screwdriver-wrench >}} \ " # practical aspects
+  ++wu: "{{< fa solid flag >}} \ " # wrap-up
+  ++que: "{{< fa solid circle-question >}} \ " # questions
+  ++is: "{{< fa solid users >}} \ " # interactive summary
+  ++ref: "{{< fa solid book >}} \ " # references
+  ++app: "{{< fa solid ellipsis-vertical >}} \ " # appendix
+  ++bre: "{{< fa solid mug-saucer >}} \ " # break
+  ++hos: "{{< fa solid keyboard >}} \ " # hands-on session
+  ++true: "{{< fa solid circle-check >}} \ " # hands-on session
+  ++false: "{{< fa regular circle-xmark >}} \ " # hands-on session
+bibliography: references.bib
+suppress-bibliography: true
+link-citations: false
+citations-hover: false
+csl: apa-cv.csl
+execute:
+  echo: true
+---
+
+<!-- -------------------------------------------------------------------------------- -->
+
+
+## Definitions {visibility="hidden"}
+$$
+\DeclareMathOperator{\AUC}{AUC}
+
+
+\newcommand{\hatf}{\hat{f}}
+$$
+## Initial code {visibility="hidden"}
+
+```{r}
+knitr::opts_chunk$set(cache=TRUE)
+```
+
+
+
+## Packages {visibility="hidden"}
+
+```{r}
+library(dplyr)
+library(pROC)
+```
+
+
+
+
+
+
+<!-- -------------------------------------------------------------------------------- -->
+
+
+# ++int Introduction
+
+
+## Scope
+
+-   Important topics (50-80%):
+    -   ++cc Core concepts
+    -   ++pm Performance metrics
+    -   ++ds Data splitting
+    -   ++sa Statistical analysis
+
+. . .
+
+-   Further considerations (20-50%)
+    -   ++pa Practical aspects
+    -   {{< fa solid circle-minus >}} topics not covered in this course...
+
+. . .
+
+-   Learning goal:
+    -   be able to identify common pitfalls for your ML problem...
+    -   ... and find suitable (evaluation) solutions.
+
+## Housekeeping
+
+-   {{< fa brands github >}} Slides & reproducible code
+    -   <https://github.com/maxwestphal/evaluation_in_supervised_ml_cen2023>
+    -   [Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/) license
+
+. . .
+
+-   ++is Interactive summaries
+    -   at the end of each section
+
+. . .
+
+-   ++que Questions
+    -   at the end of each section
+    -   online participants: may use the chat
+
+## Agenda
+
+1. ++int Introduction $\longrightarrow$ ++is
+2. ++cc Core Concepts $\longrightarrow$ ++is $\longrightarrow$ ++que
+3. ++pm Performance metrics $\longrightarrow$ ++is $\longrightarrow$ ++que
+
+. . . 
+
+4. ++bre Break
+
+. . .
+
+5. ++ds Data splitting $\longrightarrow$ ++is $\longrightarrow$ ++que
+6. ++sa Statistical analysis $\longrightarrow$ ++is $\longrightarrow$ ++que
+7. ++pa Practical aspects $\longrightarrow$ ++is $\longrightarrow$ ++que
+8. ++wu Wrap-up 
+
+
+
+<!-- -------------------------------------------------------------------------------- -->
+<!-- -------------------------------------------------------------------------------- -->
+# ++cc Core Concepts
+
+## Example project: KIPeriOP
+
+![](figures/kiperiop_diagram.png){width="80%" fig-align="center"}
+
+::: aside
+- <https://www.kiperiop.de/de/home.html>
+:::
+
+
+
+## Example project: BMDeep
+
+</br>
+
+
+
+![](figures/bmdeep.png)
+
+::: aside
+- <https://www.gesundheitsforschung-bmbf.de/de/bmdeep-comprehensive-bone-marrow-analysis-integrating-deep-learning-based-pattern-13645.php>
+- <https://www.mevis.fraunhofer.de/de/press-and-scicom/institute-news/2021/kick-off-fuer-bmbf-projekt-bmdeep.html>
+:::
+
+
+
+## Example project: CTG
+
+> 2126 fetal cardiotocograms (CTGs) were automatically processed and the respective diagnostic features measured. The CTGs were also classified by three expert obstetricians and a consensus classification label assigned to each of them. Classification was both with respect to a morphologic pattern (A, B, C. ...) and to a fetal state (N, S, P). Therefore the dataset can be used either for 10-class or 3-class experiments
+
+- The dataset consists of 2070 observations of 23 features.
+- In the following, we consider the binary classification task {**suspect**, pathological} vs. **normal**
+
+
+::: aside
+-   D. Campos, J. B. (n.d.). Cardiotocography. <https://doi.org/10.24432/C51S4N>
+-   <https://en.wikipedia.org/w/index.php?title=Cardiotocography&oldid=1168651380>
+:::
+
+## Example project: CTG
+
+:::: {.columns}
+
+::: {.column width="65%"}
+
+- "Cardiotocography (CTG) is a technique used to monitor the fetal heartbeat and uterine contractions during pregnancy and labour. The machine used to perform the monitoring is called a cardiotocograph."
+- "CTG monitoring is widely used to assess fetal well-being by identifying babies at risk of hypoxia (lack of oxygen). CTG is mainly used during labour."
+- Figure: "The display of a cardiotocograph. The fetal heartbeat is shown in orange, uterine contractions are shown in green, and the small green numbers (lower right) show the mother's heartbeat."
+
+
+:::
+
+
+::: {.column width="5%"}
+
+:::
+
+::: {.column width="30%"}
+![](figures/cardiotocography.jpg){height=600}
+:::
+
+::::
+
+
+::: aside
+- <https://en.wikipedia.org/wiki/Cardiotocography>
+:::
+
+
+
+## Task types in supervised learning
+
+<!-- https://mermaid.js.org/syntax/flowchart.html -->
+
+```{mermaid}
+%%| echo: false
+%%| fig-responsive: false
+%%| fig-width: 16
+%%| fig-height: 5
+flowchart TB
+  ML(Machine learning) --> UL(Unsupervised learning)
+  ML --> SL(Supervised learning)
+  ML --> RL(Reinforcement learning)
+  ML --> dots1(...)
+  SL --> BC(binary classification)
+  SL --> MCC(multi-class classification)
+  SL --> MLC(multi-label classification)
+  SL --> TTE(time-to-event analysis)
+  SL --> REG(regression)
+  SL --> dots2(...)
+```
+- Focus in this course: **binary classification**
+
+## ML workflow
+
+![](figures/mlguide_workflow.jpg){fig-align="center" size=70%}
+
+::: aside
+Jäckle, S., Alpers, R., Westphal, M. (2023). mlguide – First concept of a machine learning guidance toolkit. Poster presentation at 68. GMDS-Jahrestagung, Heilbronn, 2023.
+:::
+
+
+## Types of evaluation studies
+
+- This course is about evaluation studies assessing (some sort of) **performance** of prediction models or algorithms
+- This course is **not** about assessing the downstream / real-world (clinical) **utility**
+
+. . . 
+
+- Furthermore, we may distinguish between:
+  - **internal validation**: development and evaluation take place in different samples from the same population (in-distrubution)
+  - **external validation**: an independent evaluation (different time and/or reseach group) 
+  - **internal-external validation**: during development, we try to assess the generalizability (transferability) to another context 
+
+
+
+::: aside
+- Bossuyt, P. M., Reitsma, J. B., Linnet, K., & Moons, K. G. (2012). Beyond diagnostic accuracy: the clinical utility of diagnostic tests. Clinical chemistry, 58(12), 1636-1643.
+- Steyerberg, E. W., & Harrell, F. E. (2016). Prediction models need appropriate internal, internal–external, and external validation. Journal of clinical epidemiology, 69, 245-247.
+:::
+
+
+
+
+## Applied ML: "standard" pipeline
+
+![](figures/ttt_westphal_single.png){fig-align="center"}
+
+::: aside
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen).
+:::
+
+
+## ML terminology is a mess
+
+-   **Training**, aka
+    -   Development
+    -   Derivation
+    -   Learning
+
+. . .
+
+-   **Tuning**, aka
+    -   Validation
+    -   Development
+
+. . .
+
+-   **Testing**, aka
+    -   Validation
+    -   Evaluation
+
+## Bias variance trade-off
+
+![](figures/bias_variance_raschka.png){width="45%" fig-align="center"}
+
+::: aside
+- Raschka, S. (2018). Model evaluation, model selection, and algorithm selection in machine learning. arXiv preprint arXiv:1811.12808.
+:::
+
+## Bias variance trade-off in ML 
+
+![](figures/bias_variance_belkin_simple.png){height=650 fig-align="center"}
+
+::: aside
+- Belkin, M., Hsu, D., Ma, S., & Mandal, S. (2019). Reconciling modern machine-learning practice and the classical bias–variance trade-off. Proceedings of the National Academy of Sciences, 116(32), 15849-15854.
+:::
+
+## Bias variance trade-off in ML (modern)
+
+![](figures/bias_variance_belkin_modern.png){height=650 fig-align="center"}
+
+::: aside
+- Belkin, M., Hsu, D., Ma, S., & Mandal, S. (2019). Reconciling modern machine-learning practice and the classical bias–variance trade-off. Proceedings of the National Academy of Sciences, 116(32), 15849-15854.
+:::
+
+## Selection-induced bias
+
+![](figures/SIB_BIAS_wide.png){fig-align="center" height=700}
+
+::: aside
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen). 
+:::
+
+## Selection-induced bias
+
+![](figures/SIB_FWER_wide.png){fig-align="center" height=700} 
+
+::: aside 
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen).
+:::
+
+## No-free-lunch theorem
+
+> No single model (architecture) works best in all possible scenarios.
+
+- Solutions
+  - extensive experiments 
+  - inductive bias (prior knowledge)
+  - a mixture of both
+  
+::: aside
+Sterkenburg, T. F., & Grünwald, P. D. (2021). The no-free-lunch theorems of supervised learning. Synthese, 199(3-4), 9979-10015.
+:::
+
+
+## Aleatoric and epistemic uncertainty in machine learning
+
+-  "**Aleatoric (aka statistical) uncertainty** refers to the notion of
+randomness, that is, the variability in the outcome of an experiment
+which is due to inherently random effects."
+- "**Epistemic (aka systematic) uncertainty** refers to uncertainty caused
+by a lack of knowledge, i.e., to the epistemic state of the agent."
+
+::: aside
+-  Eyke Hüllermeier, 2021,   <https://www.gdsd.statistik.uni-muenchen.de/2021/gdsd_huellermeier.pdf>
+:::
+
+## Typical ML evaluation pitfalls
+
+![](figures/lones_2023_toc_detail.png){.r-stretch}
+
+::: aside
+- Lones, M. A. (2023). How to avoid machine learning pitfalls: A guide for academic researchers. arXiv preprint arXiv:2108.02497.
+:::
+
+## Typical ML pitfalls 
+
+![](figures/lones_2023_toc.png){fig-align="center" height=700}
+
+::: aside
+- Lones, M. A. (2023). How to avoid machine learning pitfalls: A guide for academic researchers. arXiv preprint arXiv:2108.02497.
+:::
+
+
+# ++is Interactive summary
+
+## Q1: What is NOT a typical pitfall in  ML evaluation studies?
+
+- data augmentation before data splitting
+- ignoring temporal dependencies
+- only evaluate each model once
+- combined model tuning and evaluation on the test data
+
+## Q1: What is NOT a typical pitfall in  ML evaluation studies?
+
+- data augmentation before data splitting ++false
+- ignoring temporal dependencies ++false
+- only evaluate each model once ++true
+- combined model tuning and evaluation on the test data ++false
+
+
+## Q2: Three datasets are needed in the standard ML pipeline to counter ...
+
+- overfitting and underfitting
+- overfitting and selection-induced bias
+- underfitting and selection-induced bias
+- overfitting, underfitting and selection-induced bias
+
+## Q2: Three datasets are needed in the standard ML pipeline to counter ...
+
+- overfitting and underfitting ++false
+- overfitting and selection-induced bias ++true
+- underfitting and selection-induced bias ++false
+- overfitting, underfitting and selection-induced bias ++false
+
+
+## Q3: What type of validation does NOT exist?
+
+- external-internal
+- internal-external
+- external
+- internal
+
+## Q3: What type of validation does NOT exist?
+
+- external-internal ++true
+- internal-external ++false
+- external ++false
+- internal ++false
+
+
+## Q4: What is NOT a valid ML task?
+
+- multil-label classification
+- time-to-event analysis
+- binary classification
+- multi-class regression
+
+
+## Q4: What is NOT a valid ML task?
+
+- multil-label classification ++false
+- time-to-event analysis ++false
+- binary classification ++false
+- multi-class regression ++true
+
+
+## Q5: When comparing multiple models on the same dataset, the severity of selection-induced bias...
+
+- decreases with model similarity
+- decreases with the number of models
+- decreases with spread of true performances
+- increases with spread of true performances
+
+
+## Q5: When comparing multiple models on the same dataset, the severity of selection-induced bias...
+
+- decreases with model similarity ++true
+- decreases with the number of models ++false
+- decreases with spread of true performances ++true
+- increases with spread of true performances ++false
+
+
+
+
+# ++que Questions
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+```{r include=FALSE}
+library(dplyr)
+
+# load pre-computed R objects
+data_eval_ttt_1 <- readRDS("data/data_eval_ttt_1.rds")
+data_eval_ttt_2 <- readRDS("data/data_eval_ttt_2.rds")
+data_eval_ncv_2 <- readRDS("data/data_eval_ncv_2.rds")
+```
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++pm Performance metrics
+
+## Performance dimensions
+
+-   **Discrimintation**: can the model distinguish between the target classes?
+-   **Calibration**: are probability prediction accurate?
+-   **Fairness**: is discrimination similar in important subgroups?
+
+. . .
+
+-   Uncertainty quantification: how good is the coverage of prediction intervals?
+-   Explainability: usually assessed in user studies...
+
+::: aside
+-   Bazionis, I. K., & Georgilakis, P. S. (2021). Review of deterministic and probabilistic wind power forecasting: Models, methods, and future research. Electricity, 2(1), 13-47.
+-   Hoffman, R. R., Mueller, S. T., Klein, G., & Litman, J. (2018). Metrics for explainable AI: Challenges and prospects. arXiv preprint arXiv:1812.04608.
+:::
+
+
+## Metric choice
+
+- A deliberate metric choice is very important for a successful ML project.
+  - a sensible metric supports/guides development
+  - an unreasonable metric hinders development
+
+. . . 
+
+- What is an *optimal* solution worth, if it is optimal w.r.t. to a suboptimal metric? 
+
+. . . 
+
+- Finding an adequate metric can be time consuming
+  - should be done early on (before any developments)
+  - should be based on discussion with important stakeholders (e.g. potential users)
+  
+. . . 
+
+- "Standard" / "default" metrics in the field:
+  - usually a good idea to report as well (secondary)
+  - often not sufficient as primary / sole metric
+  
+. . . 
+
+- Multiple interesting metrics?
+  - Development usually facilitated if there is a clear decision rule how to rank models (e.g. primary metric) 
+  
+
+
+
+
+
+## Metrics: R packages
+
+-   **Metrics**: <https://CRAN.R-project.org/package=Metrics> (2018-07-09)
+-   **ModelMetrics**: <https://CRAN.R-project.org/package=ModelMetrics> ( 2020-03-17)
+-   **metrica**: <https://CRAN.R-project.org/package=metrica> (2023-04-14)
+-   **SurvMetrics**: <https://CRAN.R-project.org/package=SurvMetrics> (2022-09-03)
+-   **MetricsWeighted**: <https://CRAN.R-project.org/package=Metrics> (2023-06-05)
+
+
+
+## Binary classification: confusion matrix
+
+![](figures/wikipedia_confusion_matrix){fig-align="center" height=700}
+
+::: aside
+- <https://en.wikipedia.org/wiki/Confusion_matrix>
+:::
+
+## Evaluation data for CTG example (train-tune-test)
+
+```{r}
+dim(data_eval_ttt_1)
+```
+
+</br>
+
+```{r}
+head(data_eval_ttt_1)
+```
+
+</br>
+
+```{r}
+mean((data_eval_ttt_1$response == "suspect") == 
+       (data_eval_ttt_1$prob.suspect > 0.5))
+```
+
+## Binary classification: confusion matrix
+
+```{r}
+
+caret::confusionMatrix(reference = data_eval_ttt_1$truth,
+                       data = data_eval_ttt_1$response,
+                       positive = "suspect")
+```
+
+## Binary classification: discrimination metrics
+
+-   **Accuracy**: Probability of correct classification (actual $=$ predicted)
+-   **Sensitivity**: Accuracy in positive class (cases, diseased, 1, TRUE)
+-   **Specificity**: Accuracy in negative class (controls, healthy, 0, FALSE)
+-   **PPV**: Accuracy in positive predictions
+-   **NPV**: Accuracy in negative predictions
+-   **Balanced accuracy**: Average of sensitivity and specificiy
+
+## Binary classification: weighted accuracy
+
+```{r}
+a <- data_eval_ttt_1$truth == "suspect"
+p <- data_eval_ttt_1$response == "suspect"
+Metrics::accuracy(actual = a, predicted = p)
+```
+
+</br>
+
+
+```{r}
+m <- 5 # sensitvity to be weighted m times higher compared to specificity
+w <- m / (1+m) # weight for sensitivity
+
+w*ModelMetrics::sensitivity(a, p) + 
+  (1-w)*ModelMetrics::specificity(a, p)
+```
+
+
+
+## Binary classification: Risk prediction
+
+-   Binary classifier which not only predict the target variable (TRUE vs. FALSE), but also a probability of an event (TRUE), may also be called risk prediction models
+-   Often fundamental requirement in clinical predictive modelling
+-   As domain experts shall usually be supported (not replaced) by ML models / algorithms, a predicted risk can be much more informative and interpretable compared to a model only capable of predicting class labels 
+
+::: aside
+- <https://en.wikipedia.org/wiki/Receiver_operating_characteristic>
+:::
+
+## Receiver operating characteristic (ROC)
+
+![](figures/wikipedia_roc_space_1.png){fig-align="center" height=700}
+
+::: aside
+- <https://en.wikipedia.org/wiki/Receiver_operating_characteristic>
+:::
+
+## Receiver operating characteristic (ROC)
+
+![](figures/wikipedia_roc_space_2.png){fig-align="center" height=700}
+
+::: aside
+- <https://en.wikipedia.org/wiki/Receiver_operating_characteristic>
+:::
+
+## Receiver operating characteristic (ROC)
+
+```{r}
+rocc <- pROC::roc(data_eval_ttt_1, response="truth", predictor="prob.suspect", levels=c("normal", "suspect"))
+
+plot(rocc)
+```
+
+## Binary classification: Area under the curve (AUC)
+
+- Area under the (ROC) curve (also "c-statistic", "concordance statistic")
+  - Interpretation:
+  - Partial AUC: restrict specificity range
+  - Many different implementations (smoothed, with CI)
+
+
+
+## Binary classification: Area under the curve (AUC)
+```{r}
+pROC::auc(rocc)
+```
+
+</br>
+
+```{r}
+pROC::auc(rocc, partial.auc=c(0.5, 1), partial.auc.correct=TRUE)
+```
+
+
+
+
+## Binary classification: calibration plot
+
+```{r}
+caret::calibration(truth ~ prob.suspect, data=data_eval_ttt_1) %>% plot()
+```
+
+## Binary classification: calibration plot
+
+```{r}
+df <- data_eval_ttt_1 %>% mutate(truth = truth=="suspect")
+predtools::calibration_plot(df, obs="truth", pred="prob.suspect")
+```
+
+::: aside
+- <https://cran.r-project.org/web/packages/predtools/vignettes/calibPlot.html>
+:::
+
+
+
+## Binary classification: calibration plot
+
+```{r}
+CalibratR::reliability_diagramm(actual = data_eval_ttt_1$truth == "suspect",
+                                predicted = data_eval_ttt_1$prob.suspect)$diagram_plot
+```
+
+## Binary classification: calibration metrics
+
+-   **Expected calibration error** (ECE)
+-   **Maximum calibration error** (MCE)
+-   **Root mean squared error** (from diagonal) (RSME)
+
+. . .
+
+-   **Calibration intercept** (calibration-in-the-large)
+-   **Calibration slope**
+
+## Binary classification: calibration metrics
+
+```{r}
+a <- data_eval_ttt_1$truth == "suspect"
+p <- data_eval_ttt_1$prob.suspect
+
+CalibratR::getECE(actual = a, predicted=p, n_bins=10)
+```
+</br>
+
+```{r}
+CalibratR::getECE(actual = a, predicted=p, n_bins=20)
+```
+</br>
+
+::: aside
+- <https://cran.r-project.org/web/packages/CalibratR/index.html>
+:::
+
+## Binary classification: calibration metrics
+
+```{r}
+CalibratR::getMCE(actual = a, predicted=p, n_bins=10)
+```
+</br>
+
+```{r}
+CalibratR::getMCE(actual = a, predicted=p, n_bins=20)
+```
+</br>
+
+
+::: aside
+- <https://cran.r-project.org/web/packages/CalibratR/index.html>
+:::
+
+## Calibration slope and intercept
+
+![](figures/calster_2019_calibration_1.png){fig-align="center"}
+
+
+::: aside
+- Van Calster, B., McLernon, D. J., Van Smeden, M., Wynants, L., & Steyerberg, E. W. (2019). Calibration: the Achilles heel of predictive analytics. BMC medicine, 17(1), 1-7.
+:::
+
+
+## Calibration slope and intercept
+
+![](figures/calster_2019_calibration_2.png){fig-align="center"}
+
+
+::: aside
+- Van Calster, B., McLernon, D. J., Van Smeden, M., Wynants, L., & Steyerberg, E. W. (2019). Calibration: the Achilles heel of predictive analytics. BMC medicine, 17(1), 1-7.
+:::
+
+## Binary classification: fairness - overview
+
+- Predictive rate parity
+- False positive rate parity
+- False negative rate parity
+- Accuracy parity
+- Negative predictive value parity
+- Specificity parity
+- ROC AUC parity
+- ... 
+
+
+::: aside
+- <https://CRAN.R-project.org/package=fairness>
+:::
+
+
+
+## Multi-class classification: Confusion matrix
+
+```{r}
+set.seed(123)
+a <- rep(letters[1:5], times= (1:5)*20)
+p <- sample(a, length(a))
+
+caret::confusionMatrix(data = as.factor(p), reference=as.factor(a))
+```
+
+
+
+
+## Multi-class classification: cost-sensitive metrics (BMDeep)
+
+![](figures/bmdeep_multiclass_1.png)
+
+
+## Multi-class classification: cost-sensitive metrics (BMDeep)
+
+![](figures/bmdeep_multiclass_2.png)
+
+
+
+
+## Regression: loss functions
+
+
+![](figures/regression_loss_functions.png){fig-align="center" height=700}
+
+::: aside
+- <https://commons.wikimedia.org/wiki/File:Regressionlosses.png>
+:::
+
+
+## Regression: loss functions
+
+- Symmetric loss functions used to define frequently used regression performance metrics, e.g.
+  - mean squared error
+  - mean absolute error
+- For some regression tasks, custom performance metrics (based on asymmetric loss functions) may be more suitable
+  - for details, see references below
+
+
+::: aside
+- Christoffersen, P. F., & Diebold, F. X. (1997). Optimal prediction under asymmetric loss. Econometric theory, 13(6), 808-817.
+- Tolstikov, A., Janssen, F., & Fürnkranz, J. (2017). Evaluation of different heuristics for accommodating asymmetric loss functions in regression. In Discovery Science: 20th International Conference, DS 2017, Kyoto, Japan, October 15–17, 2017, Proceedings 20 (pp. 67-81). Springer International Publishing.
+:::
+
+
+
+## Survival analysis: overview
+
+- **Mean absolute error** (and other regression metrics)
+  - Not recommended as censoring is ignored
+
+- **Concordance index/measure**
+  - probability that of a randomly selected pair of patients , the patient with the shorter survival time has the higher predicted risk.
+  - most freuqently used
+  - several versions do exist
+  
+- **(Integrated) Brier score**
+  
+- **Calibration slope**  
+
+::: aside
+- Rahman, M. S., Ambler, G., Choodari-Oskooei, B., & Omar, R. Z. (2017). Review and evaluation of performance measures for survival prediction models in external validation settings. BMC medical research methodology, 17(1), 1-15.
+- <https://cran.r-project.org/web/packages/SurvMetrics/vignettes/SurvMetrics-vignette.html>
+:::
+
+
+## Metric choice
+
+- A deliberate metric choice is very important for a successful ML project.
+  - a sensible metric supports/guides development
+  - an unreasonable metric hinders development
+
+. . . 
+
+- What is an *optimal* solution worth, if it is optimal w.r.t. to a suboptimal metric? 
+
+. . . 
+
+- Finding an adequate metric can be time consuming
+  - should be done early on (before any developments)
+  - should be based on discussion with important stakeholders (e.g. potential users)
+  
+. . . 
+
+- "Standard" / "default" metrics in the field:
+  - usually a good idea to report as well (secondary)
+  - often not sufficient as primary / sole metric
+  
+. . . 
+
+- Multiple interesting metrics?
+  - Development usually facilitated if there is a clear decision rule how to rank models (e.g. primary metric) 
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++is Interactive summary
+
+
+## Q1: What is displayed in the confusion matrix?
+
+- actual labels vs. predicted labels
+- predicted labels vs. estimated probabilities
+- actual labels vs. observed frequencies
+- observed frequencies vs. estimated probabilities
+
+
+## Q1: What is displayed in the confusion matrix?
+
+- actual labels vs. predicted labels ++true
+- predicted labels vs. estimated probabilities ++false
+- actual labels vs. observed frequencies ++false
+- observed frequencies vs. estimated probabilities ++false
+
+
+## Q2: Which of the following metrics is NOT applicable to all binary classifiers?
+
+- specificty
+- accuracy
+- positive predictive value
+- area under the curve
+
+## Q2: Which of the following metrics is NOT applicable to all binary classifiers?
+
+- specificty ++false
+- accuracy ++false
+- positive predictive value ++false
+- area under the curve ++true
+
+
+## Q3: Calibration assesses ...
+
+- predicted probabilities relative to observed class labels
+- predicted probabilities relative to observed class frequencies
+- predicted class labels relative to the majority class
+- predicted class labels relative to the minority class
+
+## Q3: Calibration assesses ...
+
+- predicted probabilities relative to observed class labels ++false
+- predicted probabilities relative to observed class frequencies ++true
+- predicted class labels relative to the majority class ++false
+- predicted class labels relative to the minority class ++false
+
+
+## Q4: Which of the following statements is true?
+
+- only sensitivty OR specifity should be considered, not both 
+- overall accuracy is independed of class prevalences 
+- balanced accuracy can be calculated from the confusing matrix
+- balanced accuracy can be calculated from the confusion matrix 
+
+
+## Q4: Which of the following statements is true?
+
+- only sensitivty OR specifity should be considered, not both ++false
+- overall accuracy is independed of class prevalences ++false
+- balanced accuracy can be calculated from the confusing matrix ++false
+- balanced accuracy can be calculated from the confusion matrix ++true
+
+
+## Q5: Which metrics can be used for the same ML task?
+
+- balanced accuracy and mean squared error
+- mean squared error and maximum calibration error
+- area under the curve and maximum calibration error
+- mean squared error and area under the curve
+
+
+## Q5: Which metrics can be used for the same ML task?
+
+- balanced accuracy and mean squared error ++false
+- mean squared error and maximum calibration error ++true
+- area under the curve and maximum calibration error ++true
+- mean squared error and area under the curve ++false
+
+
+
+
+# ++que Questions
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++bre Break
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++ds Data splitting
+
+## Motivation: overfitting
+
+![](figures/bias_variance_belkin_simple.png){height=650 fig-align="center"}
+
+::: aside
+- Belkin, M., Hsu, D., Ma, S., & Mandal, S. (2019). Reconciling modern machine-learning practice and the classical bias–variance trade-off. Proceedings of the National Academy of Sciences, 116(32), 15849-15854.
+:::
+
+## Motivation: selection-induced bias
+
+![](figures/SIB_BIAS_wide.png){fig-align="center" height=700}
+
+::: aside
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen).
+:::
+
+## Overview of approaches
+
+-   Train-tune-test split
+-   Cross-validation (CV)
+-   Bootstrapping
+
+. . .
+
+-   Stratified splitting
+-   Grouped (blocked) splitting
+
+. . .
+
+-   Nested splitting (nested CV)
+
+. . .
+
+-   Special variants (e.g. for time-series data)
+
+
+## The "default" train-tune-test split
+
+![](figures/ttt_westphal_single.png){fig-align="center"}
+
+::: aside
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen).
+:::
+
+
+## The "default" train-tune-test split
+
+- (Was used so far in the previous section)
+- Simple to implement
+- Low computational effort
+- Simple statistical inference
+- Target: **conditional performance**, either of...
+  - model trained on "train" dataset
+  - model trained on "train" \& "tune" datasets combined
+
+
+
+## Cross-validation (+ independent test set)
+
+![](figures/cross-validation_raschka.png){fig-align="center" height=700px}
+
+
+::: aside
+- Figure by Sebastian Raschka, 2023 (<https://twitter.com/rasbt/status/1628427006386884614>)
+:::
+
+
+## Cross-validation (+ independent test set)
+
+
+- Cross-validation (cross-tuning):
+  - unconditional performance assessed
+  - increased computational burden (by number of folds $K$)
+  - reduces danger of bad model selection for small samples 
+
+. . .   
+  
+- Is the **independent test set** really required? 
+- It depends:
+  - Only model comparison needed: no
+  - Only performance assessment: no
+  - Both needed: yes, as (CV based) performance estimate of (CV) selected model can still be biased
+  
+. . .  
+
+- Solution: Nested cross-validation  
+
+
+
+## Nested cross-validation
+
+
+![](figures/nested_resampling.png){fig-align="center" height=700}
+
+
+::: aside
+- <https://mlr.mlr-org.com/articles/tutorial/nested_resampling.html>
+:::
+
+## Computational complexity
+
+-   Train-tune-test: $1$
+-   K-fold CV: $K$ (number of folds)
+-   Nested CV: $K_{\text{inner}}\ \cdot K_{\text{outer}}$
+-   Bootstrap: $B$ (number of bootstrap repetitions)
+-   R-repeated K-fold CV: $R \cdot K$
+-   Leave-one-out CV: $n_{\text{obs}}$ (number of observations)
+
+## General recommendations
+
+- Trade off of between complexity (implementation, computation, analysis) and sample efficiency 
+
+. . . 
+
+- Large n: train/tune/test
+  - simple (implementation, computation, analysis)
+  
+. . . 
+
+- Small n: (nested) CV
+  - higher compute due to repeated sampling/training
+
+. . . 
+
+- Optimal splitting (number of folds, ratio)
+  - no general accepted solution
+  - simulation...
+  - power calculation can guide minimal test set size
+
+
+
+## Splitting variants
+
+- **Stratification**: should the distribution of certain variables be (approximately) equal in all datasets?
+  - In particular relevant for the outcome variable (classification)
+  - No/low costs, medium/high reward
+
+. . .
+
+- **Grouping** (also: blocking): Very relevant for hierarchical data
+- Relevant question: What is the **observational unit** of your study?
+    -   a (e.g. bone marrow) cell
+    -   an image / a BM smear (= a collection of cells)
+    -   a patient (= potentially multiple BM smears)
+- If a lower hierarchy level is chosen, then splitting should be grouped by patient
+
+
+
+
+## There is more to it...
+
+- Almost all data splitting techniques so far relied on **random** partitioning or sub-sampling
+- For **non-IID** observations, e.g. time-series data, special data splitting methods are required (Schnaubelt, 2019)
+- Question: What quantity are we really interested in?
+- Observation: "generalization performance" is usually not defined very precisely in ML
+
+::: aside
+- Schnaubelt, M. (2019). A comparison of machine learning model validation schemes for non-stationary time series data (No. 11/2019). FAU Discussion Papers in Economics.
+:::
+
+
+## Generalizability vs. transferability
+
+
+![](figures/overview_internal_external_validation.jpg){fig-align="center" height=650}
+
+
+::: aside
+- Parady, G., Ory, D., \& Walker, J. (2021). The overreliance on statistical goodness-of-fit and under-reliance on model validation in discrete choice models: A review of validation practices in the transportation academic literature. Journal of Choice Modelling, 38, 100257.
+:::
+
+
+## Estimand framework
+
+![](figures/estiml_rwd_results_auc_naive.png){fig-align="center" height=650}
+
+
+
+::: aside
+- Alpers, R. and Westphal, M. (2023). An estimand framework to guide model and algorithm evaluation in predictive modelling. Manuscript in preparation.
+:::
+
+
+
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++is Interactive summary
+
+## Q1: What is a commonly used data splitting technique?
+
+- train-validation-test
+- train-tune-test
+- tune-validation
+- cross-validation
+
+## Q1: What is a commonly used data splitting technique?
+
+- train-validation-test ++true
+- train-tune-test ++true
+- tune-validation ++false
+- cross-validation ++true
+
+
+## Q2: Which data splitting techniques are rarely used due to very high computational effort for model training?
+
+- 5-fold cross-validation and the bootstrap
+- the bootstrap and leave-one-out cross-validation
+- 100-fold cross-validation and the train-tune-test split
+- the bootstrap and the train-tune-test split
+
+## Q2: Which data splitting techniques are rarely used due to very high computational effort for model training?
+
+- 5-fold cross-validation and the bootstrap ++false
+- the bootstrap and leave-one-out cross-validation ++true
+- 100-fold cross-validation and the train-tune-test split ++false
+- the bootstrap and the train-tune-test split ++false
+
+
+## Q3: For large datasets, the classical "train-tune-test" split can be recommended due to...
+
+- simple statistical analysis
+- utilization of all observations for testing
+- being the default method in many packages
+- minimal computational effort
+
+
+## Q3: For large datasets, the classical "train-tune-test" split can be recommended due to...
+
+- simple statistical analysis ++true
+- utilization of all observations for testing ++false
+- being the default method in many packages ++false
+- minimal computational effort ++true
+
+
+## Q4: For small datasets, ...
+
+- a proper model comparison and evaluation is usually simpler
+- nested data splitting techniques have increased relevance
+- no data should be wasted for method evaluation
+- the importance of power estimation is increased 
+
+## Q4: For small datasets, ...
+
+- a proper model comparison and evaluation is usually simpler ++false
+- nested data splitting techniques have increased relevance  ++true
+- no data should be wasted for method evaluation ++false
+- the importance of power estimation is increased  ++true
+
+
+## Q5: Which of the following statements is true?
+
+- Stratification is required for hierarchical data structures
+- Grouping is required for hierarchical data structures
+- Stratification is required to retain the class distribution
+- Grouping is required to retain the class distribution
+
+
+
+## Q5: Which of the following statements is true?
+
+- Stratification is required for hierarchical data structures ++false
+- Grouping is required for hierarchical data structures ++true
+- Stratification is required to retain the class distribution ++true
+- Grouping is required to retain the class distribution ++false
+
+
+# ++que Questions
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++sa Statistical analysis
+
+## Goals of statistical inference
+
+-   Estimation
+
+- **Uncertainty quantification** 
+  - standard error
+  - confidence interval
+  
+- Decision making
+  - hypothesis testing 
+
+## Overview
+
+- Classical (frequentist) inference
+
+- Nonparametric methods
+  - bootstrap
+  - hierarchical bootstrap
+  
+- Complex procedures
+  - mixed models
+  - Bayesian inference
+
+## Choice of comparator
+
+- none (descriptive analysis)
+
+. . .
+
+- fixed performance threshold $\vartheta_0 = 0.8$
+
+. . . 
+
+- another (established) prediction model: $\vartheta_0 = \vartheta(\hatf_0)$ 
+  - same test data
+  - paired comparison (!) 
+
+## Evaluation data: train-tune-test (model comparison)
+
+- Scenario: a random forest model was (hyperparameter) tuned on the train/tune data. The best/final model (w.r.t. tuning AUC) shall now be compared against an established elastic net model.
+- Null hypothesis: $\vartheta^\text{ranger}_* = \vartheta^\text{glmnet}_0$ (no difference in performance)
+
+```{r}
+head(data_eval_ttt_2)
+```
+
+## Data preparation
+
+```{r}
+actual <- data_eval_ttt_2$truth
+actual_01 <- (actual == "suspect") %>% as.numeric()
+
+pred_glmnet <- data_eval_ttt_2$response_glmnet 
+pred_glmnet_01 <- (pred_glmnet== "suspect") %>% as.numeric()
+correct_glmnet_01 <- (pred_glmnet_01 == actual_01) %>% as.numeric()
+
+pred_ranger <- data_eval_ttt_2$response_ranger 
+pred_ranger_01 <- (pred_ranger== "suspect") %>% as.numeric()
+correct_ranger_01 <- (pred_ranger_01 == actual_01) %>% as.numeric()
+```
+
+## Model 1: elastic net (glmnet)
+
+```{r}
+caret::confusionMatrix(data = pred_glmnet, reference = actual)
+```
+
+## Model 2: random forest (ranger)
+
+```{r}
+caret::confusionMatrix(data = pred_ranger, reference = actual)
+```
+
+
+
+## Difference in proportions: t-test
+
+```{r}
+t.test(x=correct_ranger_01, 
+       y=correct_glmnet_01,
+       conf.level=0.95)
+```
+
+## Difference in proportions: paired t-test
+
+```{r}
+t.test(x=correct_ranger_01, 
+       y=correct_glmnet_01,
+       paired = TRUE,
+       conf.level=0.95)
+```
+
+
+## Difference in proportions: Newcombe interval
+
+```{r}
+misty::ci.prop.diff(x = correct_ranger_01,
+                    y = correct_glmnet_01,
+                    method ="newcombe",
+                    paired = TRUE, 
+                    conf.level = 0.95, 
+                    digits = 4)
+```
+::: aside
+- Newcombe, R. G. (1998a). Interval estimation for the difference between independent proportions: Comparison of eleven methods. Statistics in Medicine, 17, 873-890.
+- Newcombe, R. G. (1998b). Improved confidence intervals for the difference between binomial proportions based on paired data. Statistics in Medicine, 17, 2635-2650.
+- <https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval>
+- <https://CRAN.R-project.org/package=misty>
+:::
+
+
+## Nonparametric inference: Bootstrap
+
+- Very versatile tool
+- Minimal assumptions 
+- Not depending on asymptotics (large sample size)
+</br>
+
+::: aside 
+- Efron, B., & Tibshirani, R. J. (1994). An introduction to the bootstrap. CRC press.
+:::
+
+
+
+## Boostrap inference for single metric
+
+```{r}
+DescTools::BootCI(
+  x = actual,
+  y = pred_ranger,
+  FUN = Metrics::accuracy,
+  bci.method = "bca",
+  conf.level = 0.95
+)
+```
+::: aside
+- <https://CRAN.R-project.org/package=DescTools>
+:::
+
+## Bootstrap inference for model comparison
+
+```{r}
+delta_acc_paired <- function(correct_model_a, correct_model_b){
+  mean(correct_model_a - correct_model_b)
+}
+
+DescTools::BootCI(
+  x = correct_ranger_01,
+  y = correct_glmnet_01,
+  FUN = delta_acc_paired,
+  bci.method = "bca",
+  conf.level = 0.95
+)
+
+```
+## Bootstrap inference for model comparison
+
+```{r}
+delta_acc_paired_df <- function(df, i=1:nrow(df)){
+  df <- df[i,]
+  Metrics::accuracy(df$actual, df$pred_model_a) - 
+    Metrics::accuracy(df$actual, df$pred_model_b)
+}
+
+df <- data.frame(actual = actual_01,
+                 pred_model_a = pred_ranger_01,
+                 pred_model_b = pred_glmnet_01)
+
+boot::boot(data = df, 
+           statistic = delta_acc_paired_df,
+           R = 1000) %>% 
+  boot::boot.ci(conv=0.95, type="bca")
+
+```
+
+
+
+## CI for difference in AUCs
+
+```{r}
+rocc_glmnet <- pROC::roc(data_eval_ttt_2, response="truth", predictor="prob.suspect_glmnet", levels=c("normal", "suspect"))
+
+rocc_ranger <- pROC::roc(data_eval_ttt_2, response="truth", predictor="prob.suspect_ranger", levels=c("normal", "suspect"))
+
+plot(rocc_glmnet, col="blue")
+plot(rocc_ranger, add=TRUE, col="orange")
+```
+
+
+
+
+## CI for difference in AUCs (Delong)
+
+```{r}
+pROC::roc.test(rocc_ranger, rocc_glmnet, 
+               paired=TRUE, method="delong")
+```
+
+## CI for difference in AUCs (bootstrap)
+
+
+```{r}
+pROC::roc.test(rocc_ranger, rocc_glmnet, 
+               paired=TRUE, method="bootstrap")
+```
+
+
+
+## UQ for (nested) CV
+
+- Scenario: Algorithm evaluation or comparison in the outer loop of nested CV
+  - glmnet, ranger were tuned in the inner loop
+  - comparison of best hyperparameter combination of each approach 
+  - on each fold (1:5), compare model that was trained on remaining observations
+
+. . .   
+  
+- How can we quantify uncertainty for (difference of) performance estimate?
+
+. . . 
+
+- A few recommendations do exist (Raschka, 2018)
+- We will focus again on the bootstrap and a hierarchical bootstrap variant
+
+
+::: aside
+- Raschka, S. (2018). Model evaluation, model selection, and algorithm selection in machine learning. arXiv preprint arXiv:1811.12808.
+:::
+
+
+## UQ for (nested) CV
+
+```{r}
+head(data_eval_ncv_2)
+```
+
+
+## UQ for (nested) CV - bootstrap approaches
+
+- **Simple bootstrap**
+  - resample observations/rows of original evaluation data with replacement
+  - apply function (metric/statistic) to each resampled dataset 
+  - repeat...
+
+. . . 
+
+- **Hierarchical bootstrap**
+  - resample fold id (in this case 1:5) with replacement
+  - resample observations within these folds with replacement
+  - apply function (metric/statistic) to each resampled dataset
+  - repeat...
+
+
+
+## UQ for (nested) CV - hierarchical bootstrap in R
+
+```{r eval=FALSE}
+fabricatr::resample_data(data_eval_ncv_2,
+                         N=c(n_fold, n_obs_per_fold),
+                         ID_labels = c("fold", "row_ids"))
+```
+</br>
+
+::: aside
+- <https://cran.r-project.org/web/packages/fabricatr/index.html>
+::: 
+
+
+
+## UQ for (nested) CV - bootstrap approaches
+
+```{r include=FALSE}
+resampled_cv_simple <- readRDS("data/resampled_auc_delta_cv_simple_ncv_2.rds")
+resampled_cv_nested <- readRDS("data/resampled_auc_delta_cv_nested_ncv_2.rds")
+```
+
+```{r}
+summary(resampled_cv_simple$delta)
+```
+</br>
+
+
+```{r}
+summary(resampled_cv_nested$delta)
+```
+</br>
+
+
+## UQ for (nested) CV - bootstrap approaches
+- delta = AUC(ranger) - AUC(glmnet)
+- quantile computation below amounts to type "percentile" in boot::boot.ci
+</br>
+
+```{r}
+quantile(resampled_cv_simple$delta, c(0.025, 0.975))
+```
+</br>
+
+
+```{r}
+quantile(resampled_cv_nested$delta, c(0.025, 0.975))
+```
+
+
+
+
+
+
+
+
+
+## Multiple metrics
+
+- Usually no multiplicity correction when multiple metrics are assesed (one per performance dimension: discrimination, calibration, ...)
+- per performance dimension: 
+  - define primary metric of interest
+  - additional secondary metrics can be investigated
+
+
+
+## Train-tune-test with single "test" model
+
+![](figures/ttt_westphal_single.png){fig-align="center"}
+
+::: aside
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen).
+:::
+
+## Train-tune-test with multiple comparisons 
+
+![](figures/ttt_westphal_multiple.png){fig-align="center"}
+
+::: aside
+- Westphal, M. (2020). Model Selection and Evaluation in Supervised Machine Learning (Doctoral dissertation, Universität Bremen).
+:::
+
+
+
+## Multiple models, multiple metrics
+
+
+
+![](figures/conf_vs_comp_1.png){fig-align="center" height=650}
+
+<!-- -------------------------------------------------------------------------------- -->
+
+::: aside
+- Westphal, M., & Zapf, A. (2021). Statistical Inference for Diagnostic Test Accuracy Studies with Multiple Comparisons. arXiv preprint arXiv:2105.13469.
+- <https://CRAN.R-project.org/package=cases>
+:::
+
+
+# ++is Interactive summary
+
+
+## Q1: What is NOT a typical goal of the statistical analysis in ML evaluation studies?
+
+- hyperparameter optimization
+- performance estimation
+- hypothesis testing
+- uncertainty quantification
+
+## Q1: What is NOT a typical goal of the statistical analysis in ML evaluation studies?
+
+- hyperparameter optimization ++true
+- performance estimation ++false
+- hypothesis testing ++false
+- uncertainty quantification ++false
+
+
+## Q2: Which is a valid choice of a comparator?
+
+- another performance metric
+- another prediction model
+- a fixed threshold
+- none
+
+
+## Q2: Which is a valid choice of a comparator?
+
+- another performance metric ++false
+- another prediction model ++true
+- a fixed threshold ++true
+- none ++false
+
+
+## Q3: The classical boostrap should in general NOT be used...
+
+- for resampling / data splitting
+- as part of learning algorithms
+- for uncertainty quantification in simple scenarios
+- for statistical anaylsis of hierarchical data
+
+## Q3: The classical boostrap should in general NOT be used...
+
+- for resampling / data splitting ++false
+- as part of learning algorithms ++false
+- for uncertainty quantification in simple scenarios ++false
+- for statistical anaylsis of hierarchical data ++true
+
+## Q4: Multiple models should not be assessed on the test dataset, unless...
+
+- they are all trained by the same learning algorithm
+- they have been developed by different persons/groups
+- a correction for multiple comparisons is employed 
+- the paper will be submitted to "Nature Machine Intelligence"
+
+
+## Q4: Multiple models should not be assessed on the test dataset, unless...
+
+- they are all trained by the same learning algorithm ++false
+- they have been developed by different persons/groups ++false
+- a correction for multiple comparisons is employed ++true
+- the paper will be submitted to "Nature Machine Intelligence" ++false
+
+
+
+# ++que Questions
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++pa Practical aspects
+
+## Reporting guidelines
+
+- **TRIPOD**: Transparent reporting of a multivariable prediction model for individual prognosis or diagnosis (TRIPOD): The TRIPOD statement (2015)
+- **TRIPOD-AI** (in preparation)
+- **REFORMS**: Reporting Standards for ML-based Science (2023)
+
+::: aside
+- Collins, G. S., Reitsma, J. B., Altman, D. G., & Moons, K. G. (2015). Transparent reporting of a multivariable prediction model for individual prognosis or diagnosis (TRIPOD) the TRIPOD statement. Circulation, 131(2), 211-219.
+- <https://www.equator-network.org/reporting-guidelines/tripod-statement/>
+- <https://www.tripod-statement.org/>
+- <https://osf.io/zyacb/>
+- <https://reforms.cs.princeton.edu/>
+:::
+
+
+## TRIPOD
+
+![](figures/TRIPOD_1.png){fig-align="center" width=800}
+
+
+## Planning ahead
+
+```{mermaid echo=FALSE}
+%%| echo: false
+%%| fig-width: 12
+%%| fig-height: 6
+%%| fig-responsive: false
+flowchart LR
+  MS(Metric selection) --> SA(Statistical analysis)
+  DS(Data splitting) --> SA
+  SA --> R(Reporting)
+```
+
+- Study protocol (e.g. for prospective data aquisition)
+- Statistical analysis plan
+
+
+## Project organization
+
+-   The **"conflict of interest"** of applied ML
+    -   we want high numbers (empirical performance estimates)
+    -   we want meaningful numbers (e.g. unbiased estimates)
+
+. . .
+
+- **Splitting up work** for development, evaluation (between persons, teams, institutions) makes things a whole lot easier
+  - different teams should still work together
+  - a good evaluation effort can support model development
+
+
+
+## Requirement analysis
+
+- Typical requirements for ML solutions
+  - need for predicted probabilities
+  - sufficient interpretability (limited complexity)
+  - fast inference speed
+  - ...
+
+. . .
+
+-   Requirements should be assessed initially, not after performance evaluation.
+-   This usually requires discussion with domain experts.
+
+
+## Power calculation
+
+- Power: probability to be able to demonstrate suitability of a/your (new) model/algorithm 
+- For evaluation on test set after training and tuning: a wide variety of methods exists (classification $\leftrightarrow$ diagnostic accuracy studies)
+  - Hypothesis testing based
+  - Precision based, e.g. here: <https://shiny.ctu.unibe.ch/app_direct/presize/>
+</br>
+
+
+::: aside
+- Pepe, M. S. (2003). The statistical evaluation of medical tests for classification and prediction. Oxford university press.
+- Haynes, A. G., Lenz, A., Stalder, O., & Limacher, A. (2021). presize: An R-package for precision-based sample size calculation in clinical research. Journal of Open Source Software, 6(60), 3118.
+- Homeyer, A., Geißler, C., Schwen, L. O., Zakrzewski, F., Evans, T., Strohmenger, K., ... & Zerbe, N. (2022). Recommendations on compiling test datasets for evaluating artificial intelligence solutions in pathology. Modern Pathology, 35(12), 1759-1769.
+:::
+
+
+
+
+## Target population/setting
+
+- What is the target population/setting?
+  - Define sensible inclusion/exclusion criteria
+  - Helps to assemble the test set (IEC are met) 
+
+. . . 
+
+- During development, things may well be (and often are) a little "wilder":
+  - Synthetic data
+  - Transfer learning (other population/setting)
+  - Data augmentation (e.g. manipulation of medical images)
+  
+. . .   
+  
+- None of these is sensible in an evaluation context!
+- Exception: sensitivity analyses...
+
+
+
+
+
+## Reproducibility
+
+- Reproducibility is important but also hard (in particular in ML)
+  - many sources of variability
+  - volatile software packages
+  - non-deterministic learning
+
+. . . 
+
+- Some practical considerations
+  - random seed(ing) (set.seed(123))
+  - version control (e.g. github)
+  - experiment handling (e.g. batchtools package)
+  - pipeline management (e.g. targets package)
+
+
+::: aside
+- Heil, B. J., Hoffman, M. M., Markowetz, F., Lee, S. I., Greene, C. S., & Hicks, S. C. (2021). Reproducibility standards for machine learning in the life sciences. Nature Methods, 18(10), 1132-1135.
+<!-- - <https://CRAN.R-project.org/package=batchtools> -->
+<!-- - <https://CRAN.R-project.org/package=targets> -->
+<!-- - <https://wlandau.github.io/targets-tutorial/#1> -->
+:::
+
+
+
+
+<!-- ## Regulatory requirements -->
+
+
+<!-- -   FDA -->
+
+<!-- -   EMA -->
+
+<!-- -   EU -->
+
+<!-- -   overview paper (see also PhD thesis) -->
+
+
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++is Interactive summary
+
+## Q1: What is NOT a reporting guideline for predictive modelling studies?
+
+- TRIPOD
+- TRIPOD-AI
+- REPORT-AI
+- REFORMS
+
+## Q1: What is NOT a reporting guideline for predictive modelling studies?
+
+- TRIPOD ++false
+- TRIPOD-AI ++false
+- REPORT-AI ++true
+- REFORMS ++false
+
+## Q2: What is mostly NOT depending on the other options and should thus be decided upon initially? 
+
+- data splitting
+- statistical analysis
+- metric selection
+- reporting
+
+## Q2: What is mostly NOT depending on the other options and should thus be decided upon initially? 
+
+- data splitting ++true
+- statistical analysis ++false
+- metric selection ++true
+- reporting ++false
+
+
+## Q3: The "conflict of interest of predictive modelling" can be (partially) avoided by...
+
+- avoiding any claims on statistical significance
+- separating model development and model evaluation
+- adequate & transparent study planning 
+- intransparent reporting
+
+## Q3: The "conflict of interest of predictive modelling" can be (partially) avoided by...
+
+- avoiding any claims on statistical significance ++false
+- separating model development and model evaluation ++true
+- adequate & transparent study planning ++true
+- intransparent reporting ++false
+
+## Q4: Power analyses...
+
+- can help to avoid conducting unreasonably large studies
+- are independent of the chosen evaluation metric
+- are only useful if hypothesis testing is planned for evaluation
+- should be reported according to the TRIPOD statement
+
+## Q4: Power analyses...
+ 
+- can help to avoid conducting unreasonably large studies ++true
+- are independent of the chosen evaluation metric ++false
+- are only useful if hypothesis testing is planned for evaluation ++false
+- should be reported according to the TRIPOD statement ++true
+
+
+## Q5: For prospective studies, additional care is required...
+
+- to avoid leakage
+- to avoid statistically significant results
+- to end up with an adequate test set
+- to define the performance metric(s)
+
+## Q5: For prospective studies, additional care is required...
+
+- to avoid leakage ++true
+- to avoid statistically significant results ++false
+- to end up with an adequate test set ++true
+- to define the performance metric(s) ++false
+
+# ++que Questions
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# ++wu Wrap-up
+
+## Learnings
+
+- ++cc Several pitfalls are very prevalent in applied ML.
+- ++cc Overfitting and selection-induced bias cause overoptimistic evaluation results.
+- ++pm Performance metric(s) should be chosen deliberately.
+- ++pm Multiple dimensions can/should to be considered: discrimination, calibration, fairness, ...
+- ++pm Calibration is usually harder to achieve than discrimination.
+- ++ds Data splitting is mandatory to avoid overoptimism.
+- ++ds Large(r) samples: train-tune-test $\rightarrow$ simple(r).
+- ++ds Fewe(r) samples: (nested) CV (+test) $\rightarrow$ (more) complex.
+- ++sa Statistical analysis depends on metric choice and data splitting approach.
+- ++sa Bootstrap can deal with any metric and requires minimal assumptions.
+- ++pa Plan ahead (requirement analysis) and involve important stakeholders.
+- ++pa Evaluation should guide/support development.
+
+## Contact
+
+-   {{< fa envelope >}} [max.westphal\@mevis.fraunhofer.de](mailto:max.westphal@mevis.fraunhofer.de)
+-   {{< fa envelope >}} [rieke.alpers\@mevis.fraunhofer.de](mailto:rieke.alpers@mevis.fraunhofer.de)
+    -   Feedback
+    -   Further questions
+    -   Collaboration requests
+-   {{< fa brands twitter >}} \@MaxWestphal89
+    -   Get/stay in touch
+-   {{< fa brands github >}}  <https://github.com/maxwestphal/evaluation_in_supervised_ml_cen2023/issues>
+    -   Issues with slides/code
+
+## Have 10 minutes to spare?
+
+- In a current research project, we develop an interactive expert system for methodological guidance in applied ML (beyond model evaluation).
+- We have setup a short survey to assess user needs and requirements.
+- Thank you for your time!
+
+**<https://websites.fraunhofer.de/mlguide-user-survey/index.php/578345/newtest/Y?G00Q23=CEN23>**
+
+
+
+<!-- -------------------------------------------------------------------------------- -->
+
+<!-- -------------------------------------------------------------------------------- -->
+
+# Thank you for your participation! \n Have a great conference! {{< fa regular face-smile >}}
+
+
