@@ -112,7 +112,7 @@ library(pROC)
 ## Housekeeping
 
 -   {{< fa brands github >}} Slides & reproducible code
-    -   <https://github.com/maxwestphal/evaluation_in_supervised_ml_cen2023>
+    -   <https://github.com/maxwestphal/evaluation_in_supervised_ml_cen_2023>
     -   [Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)](https://creativecommons.org/licenses/by-sa/4.0/) license
 
 . . .
@@ -1930,7 +1930,7 @@ flowchart LR
     -   Collaboration requests
 -   {{< fa brands twitter >}} \@MaxWestphal89
     -   Get/stay in touch
--   {{< fa brands github >}}  <https://github.com/maxwestphal/evaluation_in_supervised_ml_cen2023/issues>
+-   {{< fa brands github >}}  <https://github.com/maxwestphal/evaluation_in_supervised_ml_cen_2023/issues>
     -   Issues with slides/code
 
 ## Have 10 minutes to spare?

@@ -46,9 +46,9 @@ following steps:
 - clone this repository:
   `git clone https://github.com/maxwestphal/evaluation_in_ml_cen_2023.git`
   \[terminal\]
-- install dependencies: `renv::activate()` \[R\]
-- re-produce pre-computed results: `source("scripts/_run.R)` \[R\]
-- render the file “slides.qmd”: `quarto::quarto_render()` \[terminal\]
+- install dependencies: `renv::restore()` \[R\]
+- reproduce pre-computed results: `source("scripts/_run.R)` \[R\]
+- render the file “slides.qmd”: `quarto::quarto_render()` \[R\]
 
 ## R Version Info
 
