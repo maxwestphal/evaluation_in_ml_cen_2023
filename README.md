@@ -15,9 +15,7 @@ This repository contains course materials from the
 Conference](https://cen2023.github.io/home/courses.html#Model_and_Algorithm_Evaluation_in_Supervised_Machine_Learning).
 
 </center>
-
 The rendered html slides can be accessed here:
-
 <center>
 
 **<https://maxwestphal.github.io/evaluation_in_ml_cen_2023/>**

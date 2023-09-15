@@ -20,7 +20,6 @@ This repository contains course materials from the
 </center>
 
 The rendered html slides can be accessed here:
-
 <center>
 
 **<https://maxwestphal.github.io/evaluation_in_ml_cen_2023/>**
