@@ -66,6 +66,7 @@ data/
 figures/
 
 # quarto folders
+slides/
 slides_files/
 slides_cache/
 _extensions/
