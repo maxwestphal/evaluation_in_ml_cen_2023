@@ -62,9 +62,6 @@ renv/
 # data folder
 data/
 
-# figures folder
-figures/
-
 # quarto folders
 slides_files/
 slides_cache/
