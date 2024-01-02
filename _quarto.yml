@@ -2,7 +2,6 @@ project:
   title: "evaluation_in_supervised_ml_cen2023"
   type: website
   output-dir: docs
-  execute-dir: project
 
 
 
